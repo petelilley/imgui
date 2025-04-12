@@ -18,6 +18,7 @@ set_property(CACHE IMGUI_BACKEND_PLATFORM PROPERTY STRINGS detect none allegro5 
 add_library(${CMAKE_PROJECT_NAME}
     "${CMAKE_SOURCE_DIR}/imgui.h"
     "${CMAKE_SOURCE_DIR}/imgui_internal.h"
+    "${CMAKE_SOURCE_DIR}/imgui_raii.h"
     "${CMAKE_SOURCE_DIR}/imgui.cpp"
     "${CMAKE_SOURCE_DIR}/imgui_demo.cpp"
     "${CMAKE_SOURCE_DIR}/imgui_draw.cpp"
