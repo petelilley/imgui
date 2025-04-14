@@ -1408,6 +1408,8 @@ ImGuiStyle::ImGuiStyle()
     HoverFlagsForTooltipMouse   = ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort | ImGuiHoveredFlags_AllowWhenDisabled;    // Default flags when using IsItemHovered(ImGuiHoveredFlags_ForTooltip) or BeginItemTooltip()/SetItemTooltip() while using mouse.
     HoverFlagsForTooltipNav     = ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_AllowWhenDisabled;  // Default flags when using IsItemHovered(ImGuiHoveredFlags_ForTooltip) or BeginItemTooltip()/SetItemTooltip() while using keyboard/gamepad.
 
+    memset(UserSizes, 0, sizeof(float) * 256);
+
     // Default theme
     ImGui::StyleColorsDark(this);
 }
@@ -1445,6 +1447,11 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImTrunc(DisplaySafeAreaPadding * scale_factor);
     MouseCursorScale = ImTrunc(MouseCursorScale * scale_factor);
+
+    for (int i = 0; i < 256; i++)
+    {
+        UserSizes[i] = ImTrunc(UserSizes[i] * scale_factor);
+    }
 }
 
 ImGuiIO::ImGuiIO()
