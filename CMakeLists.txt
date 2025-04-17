@@ -72,7 +72,7 @@ elseif(IMGUI_BACKEND_RENDERER STREQUAL "dx10")
 elseif(IMGUI_BACKEND_RENDERER STREQUAL "dx11")
     target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/backends/imgui_impl_dx11.h"
                                            "${CMAKE_CURRENT_SOURCE_DIR}/backends/imgui_impl_dx11.cpp")
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11)
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 d3dcompiler dwmapi)
 elseif(IMGUI_BACKEND_RENDERER STREQUAL "dx12")
     target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/backends/imgui_impl_dx12.h"
                                            "${CMAKE_CURRENT_SOURCE_DIR}/backends/imgui_impl_dx12.cpp")
