@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <utility>
 
 #include "imgui.h"
@@ -7,20 +8,22 @@
 namespace ImGui {
 
 class Scoped final {
-    bool m_init = true;
-    void (*m_end_func)() = nullptr;
+    bool m_result;
+    bool m_should_end;
+    std::function<void()> m_end_func;
 
    private:
-    Scoped(bool init, void (*end_func)())
-        : m_init(init), m_end_func(end_func) {}
+    Scoped(bool result, bool should_end, std::function<void()> end_func)
+        : m_result(result), m_should_end(should_end), m_end_func(end_func) {}
 
-    explicit Scoped(void (*end_func)()) : m_end_func(end_func) {}
+    explicit Scoped(std::function<void()> end_func)
+        : m_result(true), m_should_end(true), m_end_func(std::move(end_func)) {}
 
    public:
-    operator bool() const { return m_init; }
+    operator bool() const { return m_result; }
 
     ~Scoped() {
-        if (!m_init) return;
+        if (!m_should_end) return;
 
         if (m_end_func) {
             m_end_func();
@@ -31,7 +34,8 @@ class Scoped final {
 
     [[nodiscard]] static Scoped Window(const char* name, bool* p_open = NULL,
                                        ImGuiWindowFlags flags = 0) {
-        return Scoped(Begin(name, p_open, flags), End);
+        bool result = Begin(name, p_open, flags);
+        return Scoped(result, true, End);
     }
 
     // BeginChild(), EndChild()
@@ -40,16 +44,16 @@ class Scoped final {
                                             const ImVec2& size = ImVec2(0, 0),
                                             ImGuiChildFlags child_flags = 0,
                                             ImGuiWindowFlags window_flags = 0) {
-        return Scoped(BeginChild(str_id, size, child_flags, window_flags),
-                      EndChild);
+        bool result = BeginChild(str_id, size, child_flags, window_flags);
+        return Scoped(result, true, EndChild);
     }
 
     [[nodiscard]] static Scoped ChildWindow(ImGuiID id,
                                             const ImVec2& size = ImVec2(0, 0),
                                             ImGuiChildFlags child_flags = 0,
                                             ImGuiWindowFlags window_flags = 0) {
-        return Scoped(BeginChild(id, size, child_flags, window_flags),
-                      EndChild);
+        bool result = BeginChild(id, size, child_flags, window_flags);
+        return Scoped(result, true, EndChild);
     }
 
     // PushFont(), PopFont()
@@ -143,13 +147,15 @@ class Scoped final {
     [[nodiscard]] static Scoped Combo(const char* label,
                                       const char* preview_value,
                                       ImGuiComboFlags flags = 0) {
-        return Scoped(BeginCombo(label, preview_value, flags), EndCombo);
+        bool result = BeginCombo(label, preview_value, flags);
+        return Scoped(result, result, EndCombo);
     }
 
     // TreePush(), TreePop()
 
     [[nodiscard]] static Scoped TreeNode(const char* label) {
-        return Scoped(ImGui::TreeNode(label), TreePop);
+        bool result = ImGui::TreeNode(label);
+        return Scoped(result, result, TreePop);
     }
 
     [[nodiscard]] static Scoped TreeNode(const char* str_id, const char* fmt,
@@ -172,17 +178,20 @@ class Scoped final {
 
     [[nodiscard]] static Scoped TreeNodeV(const char* str_id, const char* fmt,
                                           va_list args) IM_FMTLIST(2) {
-        return Scoped(ImGui::TreeNodeV(str_id, fmt, args), TreePop);
+        bool result = ImGui::TreeNodeV(str_id, fmt, args);
+        return Scoped(result, result, TreePop);
     }
 
     [[nodiscard]] static Scoped TreeNodeV(const void* ptr_id, const char* fmt,
                                           va_list args) IM_FMTLIST(2) {
-        return Scoped(ImGui::TreeNodeV(ptr_id, fmt, args), TreePop);
+        bool result = ImGui::TreeNodeV(ptr_id, fmt, args);
+        return Scoped(result, result, TreePop);
     }
 
     [[nodiscard]] static Scoped TreeNodeEx(const char* label,
                                            ImGuiTreeNodeFlags flags = 0) {
-        return Scoped(ImGui::TreeNodeEx(label, flags), TreePop);
+        bool result = ImGui::TreeNodeEx(label, flags);
+        return Scoped(result, result, TreePop);
     }
 
     [[nodiscard]] static Scoped TreeNodeEx(const char* str_id,
@@ -209,18 +218,21 @@ class Scoped final {
                                             ImGuiTreeNodeFlags flags,
                                             const char* fmt, va_list args)
         IM_FMTLIST(3) {
-        return Scoped(ImGui::TreeNodeExV(str_id, flags, fmt, args), TreePop);
+        bool result = ImGui::TreeNodeExV(str_id, flags, fmt, args);
+        return Scoped(result, result, TreePop);
     }
 
     [[nodiscard]] static Scoped TreeNodeExV(const void* ptr_id,
                                             ImGuiTreeNodeFlags flags,
                                             const char* fmt, va_list args)
         IM_FMTLIST(3) {
-        return Scoped(ImGui::TreeNodeExV(ptr_id, flags, fmt, args), TreePop);
+        bool result = ImGui::TreeNodeExV(ptr_id, flags, fmt, args);
+        return Scoped(result, result, TreePop);
     }
 
     [[nodiscard]] static Scoped Tree(const char* str_id) {
-        return Scoped(ImGui::TreeNode(str_id), TreePop);
+        bool result = ImGui::TreeNode(str_id);
+        return Scoped(result, result, TreePop);
     }
 
     // BeginMultiSelect(), EndMultiSelect()
@@ -231,8 +243,10 @@ class Scoped final {
         ImGuiMultiSelectIO* multi_select_io =
             BeginMultiSelect(flags, selection_size, items_count);
 
+        bool result = multi_select_io != nullptr;
+
         return std::make_pair(
-            Scoped(multi_select_io != nullptr, [] { (void)EndMultiSelect(); }),
+            Scoped(result, result, [] { (void)EndMultiSelect(); }),
             multi_select_io);
     }
 
@@ -240,65 +254,76 @@ class Scoped final {
 
     [[nodiscard]] static Scoped ListBox(const char* label,
                                         const ImVec2& size = ImVec2(0, 0)) {
-        return Scoped(BeginListBox(label, size), EndListBox);
+        bool result = BeginListBox(label, size);
+        return Scoped(result, result, EndListBox);
     }
 
     // BeginMenuBar(), EndMenuBar()
 
     [[nodiscard]] static Scoped MenuBar() {
-        return Scoped(BeginMenuBar(), EndMenuBar);
+        bool result = BeginMenuBar();
+        return Scoped(result, result, EndMenuBar);
     }
 
     // BeginMainMenuBar(), EndMainMenuBar()
 
     [[nodiscard]] static Scoped MainMenuBar() {
-        return Scoped(BeginMainMenuBar(), EndMainMenuBar);
+        bool result = BeginMainMenuBar();
+        return Scoped(result, result, EndMainMenuBar);
     }
 
     // BeginMenu(), EndMenu()
 
     [[nodiscard]] static Scoped Menu(const char* label, bool enabled = true) {
-        return Scoped(BeginMenu(label, enabled), EndMenu);
+        bool result = BeginMenu(label, enabled);
+        return Scoped(result, result, EndMenu);
     }
 
     // BeginTooltip(), EndTooltip()
 
-    [[nodiscard]] static Scoped Tooltip(const char* text = NULL) {
-        return Scoped(BeginTooltip(), EndTooltip);
+    [[nodiscard]] static Scoped Tooltip() {
+        bool result = BeginTooltip();
+        return Scoped(result, result, EndTooltip);
     }
 
     // BeginItemTooltip()
 
-    [[nodiscard]] static Scoped ItemTooltip(const char* text = NULL) {
-        return Scoped(BeginItemTooltip(), EndTooltip);
+    [[nodiscard]] static Scoped ItemTooltip() {
+        bool result = BeginItemTooltip();
+        return Scoped(result, result, EndTooltip);
     }
 
     // BeginPopup(), EndPopup()
 
     [[nodiscard]] static Scoped Popup(const char* str_id,
                                       ImGuiWindowFlags flags = 0) {
-        return Scoped(BeginPopup(str_id, flags), EndPopup);
+        bool result = BeginPopup(str_id, flags);
+        return Scoped(result, result, EndPopup);
     }
 
     [[nodiscard]] static Scoped PopupModal(const char* name,
                                            bool* p_open = NULL,
                                            ImGuiWindowFlags flags = 0) {
-        return Scoped(BeginPopupModal(name, p_open, flags), EndPopup);
+        bool result = BeginPopupModal(name, p_open, flags);
+        return Scoped(result, result, EndPopup);
     }
 
     [[nodiscard]] static Scoped PopupContextItem(
         const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1) {
-        return Scoped(BeginPopupContextItem(str_id, popup_flags), EndPopup);
+        bool result = BeginPopupContextItem(str_id, popup_flags);
+        return Scoped(result, result, EndPopup);
     }
 
     [[nodiscard]] static Scoped PopupContextWindow(
         const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1) {
-        return Scoped(BeginPopupContextWindow(str_id, popup_flags), EndPopup);
+        bool result = BeginPopupContextWindow(str_id, popup_flags);
+        return Scoped(result, result, EndPopup);
     }
 
     [[nodiscard]] static Scoped PopupContextVoid(
         const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1) {
-        return Scoped(BeginPopupContextVoid(str_id, popup_flags), EndPopup);
+        bool result = BeginPopupContextVoid(str_id, popup_flags);
+        return Scoped(result, result, EndPopup);
     }
 
     // BeginTable(), EndTable()
@@ -308,35 +333,39 @@ class Scoped final {
                                       const ImVec2& outer_size = ImVec2(0.0f,
                                                                         0.0f),
                                       float inner_width = 0.0f) {
-        return Scoped(
-            BeginTable(str_id, columns, flags, outer_size, inner_width),
-            EndTable);
+        bool result =
+            BeginTable(str_id, columns, flags, outer_size, inner_width);
+        return Scoped(result, result, EndTable);
     }
 
     // BeginTabBar(), EndTabBar()
 
     [[nodiscard]] static Scoped TabBar(const char* str_id,
                                        ImGuiTabBarFlags flags = 0) {
-        return Scoped(BeginTabBar(str_id, flags), EndTabBar);
+        bool result = BeginTabBar(str_id, flags);
+        return Scoped(result, result, EndTabBar);
     }
 
     // BeginTabItem(), EndTabItem()
 
     [[nodiscard]] static Scoped TabItem(const char* label, bool* p_open = NULL,
                                         ImGuiTabItemFlags flags = 0) {
-        return Scoped(BeginTabItem(label, p_open, flags), EndTabItem);
+        bool result = BeginTabItem(label, p_open, flags);
+        return Scoped(result, result, EndTabItem);
     }
 
     // BeginDragDropSource(), EndDragDropSource()
 
     [[nodiscard]] static Scoped DragDropSource(ImGuiDragDropFlags flags = 0) {
-        return Scoped(BeginDragDropSource(flags), EndDragDropSource);
+        bool result = BeginDragDropSource(flags);
+        return Scoped(result, result, EndDragDropSource);
     }
 
     // BeginDragDropTarget(), EndDragDropTarget()
 
     [[nodiscard]] static Scoped DragDropTarget() {
-        return Scoped(BeginDragDropTarget(), EndDragDropTarget);
+        bool result = BeginDragDropTarget();
+        return Scoped(result, result, EndDragDropTarget);
     }
 
     // BeginDisabled(), EndDisabled()
@@ -354,6 +383,11 @@ class Scoped final {
         PushClipRect(clip_rect_min, clip_rect_max,
                      intersect_with_current_clip_rect);
         return Scoped(PopClipRect);
+    }
+
+    [[nodiscard]] static Scoped Indent(float indent_w = 0.0f) {
+        ImGui::Indent(indent_w);
+        return Scoped([=] { ImGui::Unindent(indent_w); });
     }
 };
 
