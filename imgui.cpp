@@ -1540,6 +1540,8 @@ ImGuiStyle::ImGuiStyle()
     _MainScale                  = 1.0f;
     _NextFrameFontSizeBase      = 0.0f;
 
+    memset(UserSizes, 0, sizeof(float) * 256);
+
     // Default theme
     ImGui::StyleColorsDark(this);
 }
@@ -1580,6 +1582,11 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImTrunc(DisplaySafeAreaPadding * scale_factor);
     MouseCursorScale = ImTrunc(MouseCursorScale * scale_factor);
+
+    for (int i = 0; i < 256; i++)
+    {
+        UserSizes[i] = ImTrunc(UserSizes[i] * scale_factor);
+    }
 }
 
 ImGuiIO::ImGuiIO()

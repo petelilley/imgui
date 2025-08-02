@@ -2368,6 +2368,8 @@ struct ImGuiStyle
     float       CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     float       CircleTessellationMaxError; // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
 
+    float       UserSizes[256];             // User may store custom sizes in this array. Sizes are scaled the same way as other sizes in this structure.
+
     // Colors
     ImVec4      Colors[ImGuiCol_COUNT];
 
